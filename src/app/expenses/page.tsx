@@ -9,6 +9,12 @@
 // (a Client Component) for interactivity.
 // ============================================================
 
+// ⭐ KEY: Prevent Next.js from pre-rendering this page at BUILD time.
+// Without this, Vercel tries to fetch /api/expenses during the build,
+// but the API doesn't exist yet during build → crash!
+// 'force-dynamic' = render this page on every REQUEST, not at build time.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { Expense } from "@/types/expense";
 import ExpensesListClient from "@/components/ExpensesListClient";
@@ -22,10 +28,12 @@ import ExpensesListClient from "@/components/ExpensesListClient";
 // ============================================================
 async function fetchAllExpenses(): Promise<Expense[]> {
   try {
-    // Build the full URL for our API.
-    // process.env.NEXT_PUBLIC_BASE_URL = set in .env (e.g. "https://myapp.com")
-    // In development, falls back to "http://localhost:3000"
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+    // Smart base URL detection (same logic as lib/serverApi.ts)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ??
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
 
     const response = await fetch(`${baseUrl}/api/expenses`, {
       cache: "no-store",
