@@ -17,41 +17,26 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { Expense } from "@/types/expense";
+import { getAllExpenses } from "@/lib/data";
 import ExpensesListClient from "@/components/ExpensesListClient";
 
 // ============================================================
 // fetchAllExpenses — server-side data fetch
 //
-// We use fetch() pointing to our own API route.
-// { cache: 'no-store' } = never cache — always get fresh data.
-// This is needed because expenses change often.
+// On Vercel, Server Components should read directly from the
+// data source (lib/data.ts) instead of using fetch() to call
+// their own API routes to avoid proxy blocks and timeouts.
 // ============================================================
 async function fetchAllExpenses(): Promise<Expense[]> {
-  try {
-    // Smart base URL detection (same logic as lib/serverApi.ts)
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ??
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000");
+  // Read directly from our in-memory "database"
+  const allExpenses = getAllExpenses();
 
-    const response = await fetch(`${baseUrl}/api/expenses`, {
-      cache: "no-store",
-      // "no-store" = don't cache this response.
-      // Every page load fetches fresh data from the API.
-    });
+  // Sort descending by date (newest first)
+  allExpenses.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 
-    if (!response.ok) {
-      // .ok is false for 4xx/5xx errors
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const json = await response.json();
-    return json.data as Expense[]; // The array of expenses
-  } catch (error) {
-    // If fetch fails, throw so the error.tsx boundary catches it
-    throw new Error("Failed to load expenses from server");
-  }
+  return allExpenses;
 }
 
 // ============================================================
